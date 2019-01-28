@@ -44,7 +44,7 @@ export interface ITextEditorModel extends IEditorModel {
 	/**
 	 * Provides access to the underlying `ITextModel`.
 	 */
-	readonly textEditorModel: ITextModel;
+	readonly textEditorModel: ITextModel | null;
 
 	isReadonly(): boolean;
 }
