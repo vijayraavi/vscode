@@ -373,6 +373,16 @@
 				]
 			},
 			{
+				"target": "**/vs/workbench/nodeless/browser/**",
+				"restrictions": [
+					"vs/nls",
+					"vs/css!./**/*",
+					"**/vs/base/{common,browser}/**",
+					"**/vs/base/parts/*/{common,browser}/**"
+					// no more dependencies to keep this leightweight
+				]
+			},
+			{
 				"target": "**/vs/workbench/workbench.main.ts",
 				"restrictions": [
 					"**"
