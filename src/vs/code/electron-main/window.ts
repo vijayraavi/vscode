@@ -125,7 +125,7 @@ export class CodeWindow extends Disposable implements ICodeWindow {
 			height: this.windowState.height,
 			x: this.windowState.x,
 			y: this.windowState.y,
-			backgroundColor: getBackgroundColor(this.stateService),
+			// backgroundColor: getBackgroundColor(this.stateService),
 			minWidth: CodeWindow.MIN_WIDTH,
 			minHeight: CodeWindow.MIN_HEIGHT,
 			show: !isFullscreenOrMaximized,
@@ -190,6 +190,8 @@ export class CodeWindow extends Disposable implements ICodeWindow {
 				this._win.show(); // to reduce flicker from the default window size to maximize, we only show after maximize
 			}
 		}
+
+		this._win.webContents.toggleDevTools();
 
 		this._lastFocusTime = Date.now(); // since we show directly, we need to set the last focus time too
 	}
@@ -621,7 +623,7 @@ export class CodeWindow extends Disposable implements ICodeWindow {
 	}
 
 	private doGetUrl(config: object): string {
-		return `${require.toUrl('vs/code/electron-browser/workbench/workbench.html')}?config=${encodeURIComponent(JSON.stringify(config))}`;
+		return `${require.toUrl('vs/code/electron-browser/workbench/workbench-nodeless.html')}?config=${encodeURIComponent(JSON.stringify(config))}`;
 	}
 
 	serializeWindowState(): IWindowState {
