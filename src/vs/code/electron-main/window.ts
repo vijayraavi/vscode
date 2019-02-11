@@ -22,7 +22,6 @@ import { IBackupMainService } from 'vs/platform/backup/common/backup';
 import { ISerializableCommandAction } from 'vs/platform/actions/common/actions';
 import * as perf from 'vs/base/common/performance';
 import { resolveMarketplaceHeaders } from 'vs/platform/extensionManagement/node/extensionGalleryService';
-import { IStorageMainService } from 'vs/platform/storage/node/storageMainService';
 import { RunOnceScheduler } from 'vs/base/common/async';
 
 export interface IWindowCreationOptions {
@@ -84,7 +83,6 @@ export class CodeWindow extends Disposable implements ICodeWindow {
 		@IConfigurationService private readonly configurationService: IConfigurationService,
 		@IWorkspacesMainService private readonly workspacesMainService: IWorkspacesMainService,
 		@IBackupMainService private readonly backupMainService: IBackupMainService,
-		@IStorageMainService private readonly storageMainService: IStorageMainService
 	) {
 		super();
 
@@ -590,7 +588,7 @@ export class CodeWindow extends Disposable implements ICodeWindow {
 		windowConfiguration.perfEntries = perf.exportEntries();
 
 		// Parts splash
-		windowConfiguration.partsSplashData = this.storageMainService.get('parts-splash-data', undefined);
+		windowConfiguration.partsSplashPath = path.join(this.environmentService.userDataPath, 'rapid_render.json');
 
 		// Config (combination of process.argv and window configuration)
 		const environment = parseArgs(process.argv);

@@ -17,14 +17,15 @@ import { URI } from 'vs/base/common/uri';
 import { localize } from 'vs/nls';
 import { ILogService } from 'vs/platform/log/common/log';
 import { Severity } from 'vs/platform/notification/common/notification';
-import { IRawFileMatch2, resultIsMatch } from 'vs/platform/search/common/search';
+import { IRawFileMatch2, resultIsMatch } from 'vs/workbench/services/search/common/search';
 import { Workspace, WorkspaceFolder } from 'vs/platform/workspace/common/workspace';
 import { Range, RelativePattern } from 'vs/workbench/api/node/extHostTypes';
 import { ITextQueryBuilderOptions } from 'vs/workbench/contrib/search/common/queryBuilder';
 import { IExtensionDescription } from 'vs/workbench/services/extensions/common/extensions';
 import * as vscode from 'vscode';
-import { ExtHostWorkspaceShape, IMainContext, IWorkspaceData, MainContext, MainThreadMessageServiceShape, MainThreadWorkspaceShape } from './extHost.protocol';
+import { ExtHostWorkspaceShape, IWorkspaceData, MainThreadMessageServiceShape, MainThreadWorkspaceShape, IMainContext, MainContext } from './extHost.protocol';
 import { ExtensionIdentifier } from 'vs/platform/extensions/common/extensions';
+import { Barrier } from 'vs/base/common/async';
 
 function isFolderEqual(folderA: URI, folderB: URI): boolean {
 	return isEqual(folderA, folderB, !isLinux);
@@ -142,13 +143,55 @@ class ExtHostWorkspaceImpl extends Workspace {
 
 export class ExtHostWorkspace implements ExtHostWorkspaceShape {
 
+	private readonly _mainContext: IMainContext;
+	private readonly _logService: ILogService;
+	private readonly _requestIdProvider: Counter;
+	private readonly _barrier: Barrier;
+	private _actual: ExtHostWorkspaceProvider;
+
+	constructor(
+		mainContext: IMainContext,
+		logService: ILogService,
+		requestIdProvider: Counter
+	) {
+		this._mainContext = mainContext;
+		this._logService = logService;
+		this._requestIdProvider = requestIdProvider;
+		this._barrier = new Barrier();
+		this._actual = null;
+	}
+
+	public getWorkspaceProvider(): Promise<ExtHostWorkspaceProvider> {
+		return this._barrier.wait().then(_ => this._actual);
+	}
+
+	$initializeWorkspace(data: IWorkspaceData): void {
+		this._actual = new ExtHostWorkspaceProvider(this._mainContext, data, this._logService, this._requestIdProvider);
+		this._barrier.open();
+	}
+
+	$acceptWorkspaceData(workspace: IWorkspaceData): void {
+		if (this._actual) {
+			this._actual.$acceptWorkspaceData(workspace);
+		}
+	}
+
+	$handleTextSearchResult(result: IRawFileMatch2, requestId: number): void {
+		if (this._actual) {
+			this._actual.$handleTextSearchResult(result, requestId);
+		}
+	}
+
+}
+export class ExtHostWorkspaceProvider {
+
 	private readonly _onDidChangeWorkspace = new Emitter<vscode.WorkspaceFoldersChangeEvent>();
-	private readonly _proxy: MainThreadWorkspaceShape;
 
 	private _confirmedWorkspace: ExtHostWorkspaceImpl;
 	private _unconfirmedWorkspace?: ExtHostWorkspaceImpl;
 
-	private _messageService: MainThreadMessageServiceShape;
+	private readonly _proxy: MainThreadWorkspaceShape;
+	private readonly _messageService: MainThreadMessageServiceShape;
 
 	readonly onDidChangeWorkspace: Event<vscode.WorkspaceFoldersChangeEvent> = this._onDidChangeWorkspace.event;
 

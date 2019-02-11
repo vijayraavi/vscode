@@ -25,7 +25,7 @@ import { ResourceLabelFormatter } from 'vs/platform/label/common/label';
 import { LogLevel } from 'vs/platform/log/common/log';
 import { IMarkerData } from 'vs/platform/markers/common/markers';
 import { IPickOptions, IQuickInputButton, IQuickPickItem } from 'vs/platform/quickinput/common/quickInput';
-import { IPatternInfo, IRawFileMatch2, IRawQuery, IRawTextQuery, ISearchCompleteStats } from 'vs/platform/search/common/search';
+import { IPatternInfo, IRawFileMatch2, IRawQuery, IRawTextQuery, ISearchCompleteStats } from 'vs/workbench/services/search/common/search';
 import { StatusbarAlignment as MainThreadStatusBarAlignment } from 'vs/platform/statusbar/common/statusbar';
 import { ITelemetryInfo } from 'vs/platform/telemetry/common/telemetry';
 import { ThemeColor } from 'vs/platform/theme/common/themeService';
@@ -55,18 +55,21 @@ export interface IEnvironment {
 	globalStorageHome: URI;
 }
 
-export interface IWorkspaceData {
+export interface IStaticWorkspaceData {
 	id: string;
 	name: string;
-	folders: { uri: UriComponents, name: string, index: number }[];
 	configuration?: UriComponents;
+}
+
+export interface IWorkspaceData extends IStaticWorkspaceData {
+	folders: { uri: UriComponents, name: string, index: number }[];
 }
 
 export interface IInitData {
 	commit?: string;
 	parentPid: number;
 	environment: IEnvironment;
-	workspace?: IWorkspaceData;
+	workspace?: IStaticWorkspaceData;
 	resolvedExtensions: ExtensionIdentifier[];
 	hostExtensions: ExtensionIdentifier[];
 	extensions: IExtensionDescription[];
@@ -335,12 +338,12 @@ export interface MainThreadMessageServiceShape extends IDisposable {
 
 export interface MainThreadOutputServiceShape extends IDisposable {
 	$register(label: string, log: boolean, file?: UriComponents): Promise<string>;
-	$append(channelId: string, value: string): Promise<void>;
-	$update(channelId: string): Promise<void>;
-	$clear(channelId: string, till: number): Promise<void>;
-	$reveal(channelId: string, preserveFocus: boolean): Promise<void>;
-	$close(channelId: string): Promise<void>;
-	$dispose(channelId: string): Promise<void>;
+	$append(channelId: string, value: string): Promise<void> | undefined;
+	$update(channelId: string): Promise<void> | undefined;
+	$clear(channelId: string, till: number): Promise<void> | undefined;
+	$reveal(channelId: string, preserveFocus: boolean): Promise<void> | undefined;
+	$close(channelId: string): Promise<void> | undefined;
+	$dispose(channelId: string): Promise<void> | undefined;
 }
 
 export interface MainThreadProgressShape extends IDisposable {
@@ -720,6 +723,7 @@ export interface ExtHostTreeViewsShape {
 }
 
 export interface ExtHostWorkspaceShape {
+	$initializeWorkspace(workspace: IWorkspaceData | null): void;
 	$acceptWorkspaceData(workspace: IWorkspaceData | null): void;
 	$handleTextSearchResult(result: IRawFileMatch2, requestId: number): void;
 }
@@ -882,7 +886,11 @@ export interface CodeActionDto {
 
 export type LinkDto = ObjectIdentifier & modes.ILink;
 
-export type CodeLensDto = ObjectIdentifier & modes.ICodeLensSymbol;
+export interface CodeLensDto extends ObjectIdentifier {
+	range: IRange;
+	id?: string;
+	command?: CommandDto;
+}
 
 export interface ExtHostLanguageFeaturesShape {
 	$provideDocumentSymbols(handle: number, resource: UriComponents, token: CancellationToken): Promise<modes.DocumentSymbol[]>;
@@ -1032,7 +1040,7 @@ export interface ExtHostDebugServiceShape {
 	$provideDebugAdapter(handle: number, session: IDebugSessionDto): Promise<IAdapterDescriptor>;
 	$acceptDebugSessionStarted(session: IDebugSessionDto): void;
 	$acceptDebugSessionTerminated(session: IDebugSessionDto): void;
-	$acceptDebugSessionActiveChanged(session: IDebugSessionDto): void;
+	$acceptDebugSessionActiveChanged(session: IDebugSessionDto | undefined): void;
 	$acceptDebugSessionCustomEvent(session: IDebugSessionDto, event: any): void;
 	$acceptBreakpointsDelta(delta: IBreakpointsDeltaDto): void;
 }
